@@ -1,0 +1,22 @@
+{
+    "project_name":       "bootloader",
+    "project_path":       "/Users/mgois/esp/esp-idf/components/bootloader/subproject",
+    "build_dir":          "/Users/mgois/tcc/webserver_setup/build/bootloader",
+    "config_file":        "/Users/mgois/tcc/webserver_setup/sdkconfig",
+    "config_defaults":    "",
+    "app_elf":            "bootloader.elf",
+    "app_bin":            "bootloader.bin",
+    "git_revision":       "v5.0-dev-3567-ge8d172eb87",
+    "target":             "esp32",
+    "rev":                "0",
+    "phy_data_partition": "",
+    "monitor_baud" :      "115200",
+    "monitor_toolprefix": "xtensa-esp32-elf-",
+    "config_environment" : {
+        "COMPONENT_KCONFIGS" : "/Users/mgois/esp/esp-idf/components/efuse/Kconfig;/Users/mgois/esp/esp-idf/components/esp_common/Kconfig;/Users/mgois/esp/esp-idf/components/esp_hw_support/Kconfig;/Users/mgois/esp/esp-idf/components/esp_system/Kconfig;/Users/mgois/esp/esp-idf/components/freertos/Kconfig;/Users/mgois/esp/esp-idf/components/hal/Kconfig;/Users/mgois/esp/esp-idf/components/log/Kconfig;/Users/mgois/esp/esp-idf/components/newlib/Kconfig;/Users/mgois/esp/esp-idf/components/spi_flash/Kconfig",
+        "COMPONENT_KCONFIGS_PROJBUILD" : "/Users/mgois/esp/esp-idf/components/bootloader/Kconfig.projbuild;/Users/mgois/esp/esp-idf/components/esp_rom/Kconfig.projbuild;/Users/mgois/esp/esp-idf/components/esptool_py/Kconfig.projbuild;/Users/mgois/esp/esp-idf/components/partition_table/Kconfig.projbuild"
+    },
+    "build_components" : [ "bootloader", "bootloader_support", "efuse", "esp_common", "esp_hw_support", "esp_rom", "esp_system", "esptool_py", "freertos", "hal", "log", "main", "micro-ecc", "newlib", "partition_table", "soc", "spi_flash", "xtensa", "" ],
+    "build_component_paths" : [ "/Users/mgois/esp/esp-idf/components/bootloader", "/Users/mgois/esp/esp-idf/components/bootloader_support", "/Users/mgois/esp/esp-idf/components/efuse", "/Users/mgois/esp/esp-idf/components/esp_common", "/Users/mgois/esp/esp-idf/components/esp_hw_support", "/Users/mgois/esp/esp-idf/components/esp_rom", "/Users/mgois/esp/esp-idf/components/esp_system", "/Users/mgois/esp/esp-idf/components/esptool_py", "/Users/mgois/esp/esp-idf/components/freertos", "/Users/mgois/esp/esp-idf/components/hal", "/Users/mgois/esp/esp-idf/components/log", "/Users/mgois/esp/esp-idf/components/bootloader/subproject/main", "/Users/mgois/esp/esp-idf/components/bootloader/subproject/components/micro-ecc", "/Users/mgois/esp/esp-idf/components/newlib", "/Users/mgois/esp/esp-idf/components/partition_table", "/Users/mgois/esp/esp-idf/components/soc", "/Users/mgois/esp/esp-idf/components/spi_flash", "/Users/mgois/esp/esp-idf/components/xtensa", "" ],
+    "debug_prefix_map_gdbinit": ""
+}

@@ -1,0 +1,13 @@
+# Target labels
+ bootloader
+# Source files and their labels
+/Users/mgois/tcc/webserver_setup/build/CMakeFiles/bootloader
+/Users/mgois/tcc/webserver_setup/build/CMakeFiles/bootloader.rule
+/Users/mgois/tcc/webserver_setup/build/CMakeFiles/bootloader-complete.rule
+/Users/mgois/tcc/webserver_setup/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
+/Users/mgois/tcc/webserver_setup/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+/Users/mgois/tcc/webserver_setup/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+/Users/mgois/tcc/webserver_setup/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+/Users/mgois/tcc/webserver_setup/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+/Users/mgois/tcc/webserver_setup/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+/Users/mgois/tcc/webserver_setup/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule
