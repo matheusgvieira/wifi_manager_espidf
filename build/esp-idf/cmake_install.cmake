@@ -169,21 +169,6 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/vfs/cmake_install.cmake")
-endif()
-
-if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  # Include the install script for the subdirectory.
-  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/esp_netif/cmake_install.cmake")
-endif()
-
-if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  # Include the install script for the subdirectory.
-  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/esp_eth/cmake_install.cmake")
-endif()
-
-if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  # Include the install script for the subdirectory.
   include("/Users/mgois/tcc/webserver_setup/build/esp-idf/esp_event/cmake_install.cmake")
 endif()
 
@@ -199,12 +184,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/wpa_supplicant/cmake_install.cmake")
-endif()
-
-if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  # Include the install script for the subdirectory.
-  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/esp_wifi/cmake_install.cmake")
+  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/vfs/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
@@ -214,7 +194,17 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/asio/cmake_install.cmake")
+  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/esp_netif/cmake_install.cmake")
+endif()
+
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
+  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/wpa_supplicant/cmake_install.cmake")
+endif()
+
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
+  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/esp_wifi/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
@@ -249,7 +239,12 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/esp_adc_cal/cmake_install.cmake")
+  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/esp_adc/cmake_install.cmake")
+endif()
+
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
+  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/esp_eth/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
@@ -304,12 +299,12 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/mdns/cmake_install.cmake")
+  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/esp_local_ctrl/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/esp_local_ctrl/cmake_install.cmake")
+  include("/Users/mgois/tcc/webserver_setup/build/esp-idf/esp_psram/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)

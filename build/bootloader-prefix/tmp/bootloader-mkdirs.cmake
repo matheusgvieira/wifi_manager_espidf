@@ -17,3 +17,6 @@ set(configSubDirs )
 foreach(subDir IN LISTS configSubDirs)
     file(MAKE_DIRECTORY "/Users/mgois/tcc/webserver_setup/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
 endforeach()
+if(cfgdir)
+  file(MAKE_DIRECTORY "/Users/mgois/tcc/webserver_setup/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
+endif()

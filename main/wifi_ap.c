@@ -1,12 +1,17 @@
 #include "wifi_ap.h"
 
-static const char *TAG = "ESP_WIFI_AP";
+static const char *TAG = "ESP_WIFI_APSTA";
+
+static int s_retry_num = 0;
 
 static httpd_handle_t server = NULL;
 
-led_rgb wifi_ap_led = {.pin = 2, .time = 1000, .color = "blue"};
+led_rgb wifi_apsta_led = {.pin = 2, .time = 1000, .color = "blue"};
 
 TaskHandle_t xHandle;
+
+static EventGroupHandle_t wifi_event_group;
+const int CONNECTED_BIT = BIT0;
 
 static int save_wifi_credentials(wifi_credentials *credentials) {
     esp_err_t err = nvs_flash_init();
@@ -95,6 +100,7 @@ static esp_err_t post_handler(httpd_req_t *req)
     stop_webserver(server);
     ESP_ERROR_CHECK(esp_wifi_stop());
     vTaskSuspend( xHandle );
+    esp_restart();
 
     return ESP_OK;
 }
@@ -133,7 +139,7 @@ static httpd_handle_t start_webserver(void)
     return server;
 }
 
-static void wifi_event_handler(void* arg, esp_event_base_t event_base,
+static void wifi_event_ap_handler(void* arg, esp_event_base_t event_base,
                                int32_t event_id, void* event_data)
 {
     if (event_id == WIFI_EVENT_AP_STACONNECTED) {
@@ -148,7 +154,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
-static void wifi_init_softap(wifi_credentials *credentials)
+static void wifi_apsta()
 {
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -164,20 +170,22 @@ static void wifi_init_softap(wifi_credentials *credentials)
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
 
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
                                                         ESP_EVENT_ANY_ID,
-                                                        &wifi_event_handler,
+                                                        &wifi_event_ap_handler,
                                                         NULL,
                                                         NULL));
 
+
+
     wifi_config_t ap_config = {
             .ap = {
-                    .ssid = EXAMPLE_ESP_WIFI_SSID,
-                    .ssid_len = strlen(EXAMPLE_ESP_WIFI_SSID),
+                    .ssid = CONFIG_AP_WIFI_SSID,
+                    .ssid_len = strlen(CONFIG_AP_WIFI_SSID),
                     .channel = EXAMPLE_ESP_WIFI_CHANNEL,
-                    .password = EXAMPLE_ESP_WIFI_PASS,
+                    .password = CONFIG_AP_WIFI_PASSWORD,
                     .max_connection = EXAMPLE_MAX_STA_CONN,
                     .authmode = WIFI_AUTH_WPA_WPA2_PSK,
                     .pmf_cfg = {
@@ -188,43 +196,10 @@ static void wifi_init_softap(wifi_credentials *credentials)
 
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
 
-    wifi_config_t sta_config;
-    memcpy(sta_config.sta.ssid, (u_int8_t *)credentials->ssid, strlen(credentials->ssid));
-    memcpy(sta_config.sta.password, (u_int8_t *)credentials->password, strlen(credentials->ssid));
+    ESP_ERROR_CHECK( esp_wifi_start() );
 
-    ESP_LOGI(TAG, "connecting to ap SSID:%s password:%s",
-
-             sta_config.sta.ssid, sta_config.sta.password);
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &sta_config));
-
-    ESP_ERROR_CHECK(esp_wifi_start());
-    printf("Starting access point, SSID=%s\n", "Test_Transmitter");
-    ESP_ERROR_CHECK(esp_wifi_connect()); //AP
-
-    ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s channel:%d",
-             EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS, EXAMPLE_ESP_WIFI_CHANNEL);
-}
-
-void setup_wifi(wifi_credentials *credentials) {
-
-    // Init led
-    init_led(&wifi_ap_led);
-
-    //Initialize NVS
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
-
-    ESP_LOGI(TAG, "ESP_WIFI_MODE_AP");
-    wifi_init_softap(credentials);
-
-    xTaskCreate(toggle_led_task, "toggle_led_task", 1024*4, &wifi_ap_led, 2, &xHandle);
-
-    /* Start the server for the first time */
-    server = start_webserver();
+    ESP_LOGI(TAG, "WIFI_MODE_AP started. SSID:%s password:%s channel:%d",
+             CONFIG_AP_WIFI_SSID, CONFIG_AP_WIFI_PASSWORD, CONFIG_AP_WIFI_CHANNEL);
 }
 
 void get_wifi_credentials(wifi_credentials *credentials) {
@@ -311,4 +286,116 @@ int reset_wifi_credentials() {
 
     return -1;
 }
+
+void setup_wifi() {
+
+    // Init led
+    init_led(&wifi_apsta_led);
+
+    //Initialize NVS
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+
+    ESP_LOGI(TAG, "ESP_WIFI_MODE_APSTA");
+    wifi_apsta();
+
+    xTaskCreate(toggle_led_task, "toggle_led_task", 1024*4, &wifi_apsta_led, 2, &xHandle);
+
+    /* Start the server for the first time */
+    server = start_webserver();
+
+}
+
+bool check_credentials(wifi_credentials *credentials) {
+    return (strlen(credentials->ssid) <= 0 || strlen(credentials->password) <= 0) ? true : false;
+}
+
+static void wifi_event_sta_handler(void* arg, esp_event_base_t event_base,
+                          int32_t event_id, void* event_data)
+{
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+        esp_wifi_connect();
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY) {
+            esp_wifi_connect();
+            s_retry_num++;
+            ESP_LOGI(TAG, "retry to connect to the AP");
+        } else {
+            xEventGroupSetBits(wifi_event_group, WIFI_FAIL_BIT);
+        }
+        ESP_LOGI(TAG,"connect to the AP fail");
+    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+        ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+        s_retry_num = 0;
+        xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
+    }
+}
+
+int8_t wifi_connect_sta(wifi_credentials *credentials) {
+    // Init led
+    init_led(&wifi_apsta_led);
+
+    wifi_event_group = xEventGroupCreate();
+
+    ESP_ERROR_CHECK(esp_netif_init());
+
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_sta();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    esp_event_handler_instance_t instance_any_id;
+    esp_event_handler_instance_t instance_got_ip;
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+                                                        ESP_EVENT_ANY_ID,
+                                                        &wifi_event_sta_handler,
+                                                        NULL,
+                                                        &instance_any_id));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+                                                        IP_EVENT_STA_GOT_IP,
+                                                        &wifi_event_sta_handler,
+                                                        NULL,
+                                                        &instance_got_ip));
+
+    wifi_config_t sta_config = { 0 };
+    strcpy((char *)sta_config.sta.ssid, credentials->ssid);
+    strcpy((char *)sta_config.sta.password, credentials->password);
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
+    ESP_ERROR_CHECK( esp_wifi_set_config(ESP_IF_WIFI_STA, &sta_config) );
+
+    ESP_ERROR_CHECK( esp_wifi_start() );
+
+    ESP_LOGI(TAG, "wifi_init_sta finished.");
+
+
+    EventBits_t bits = xEventGroupWaitBits(wifi_event_group,
+                                           WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+                                           pdFALSE,
+                                           pdFALSE,
+                                           portMAX_DELAY);
+
+    if (bits & WIFI_CONNECTED_BIT) {
+        ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
+                 credentials->ssid, credentials->password);
+        set_state_led(&wifi_apsta_led, 1);
+        return 1;
+    } else if (bits & WIFI_FAIL_BIT) {
+        ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
+                 credentials->ssid, credentials->password);
+        set_state_led(&wifi_apsta_led, 0);
+        return 0;
+    } else {
+        ESP_LOGE(TAG, "UNEXPECTED EVENT");
+    }
+
+    return 0;
+}
+
 

@@ -28,8 +28,8 @@ CMAKE_ASM_COMPILER_AR:FILEPATH=/Users/mgois/.espressif/tools/xtensa-esp32-elf/es
 // for the GCC compiler
 CMAKE_ASM_COMPILER_RANLIB:FILEPATH=/Users/mgois/.espressif/tools/xtensa-esp32-elf/esp-2022r1-RC1-11.2.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc-ranlib
 
-//Flags used by the ASM compiler during all build types.
-CMAKE_ASM_FLAGS:STRING=
+//ASM Compiler Base Flags
+CMAKE_ASM_FLAGS:STRING='-mlongcalls '
 
 //Flags used by the ASM compiler during DEBUG builds.
 CMAKE_ASM_FLAGS_DEBUG:STRING=-g
@@ -113,6 +113,9 @@ CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO:STRING=
 
 //Enable/Disable output of compile commands during generation.
 CMAKE_EXPORT_COMPILE_COMMANDS:BOOL=
+
+//Value Computed by CMake.
+CMAKE_FIND_PACKAGE_REDIRECTS_DIR:STATIC=/Users/mgois/tcc/webserver_setup/build/bootloader/CMakeFiles/pkgRedirects
 
 //Install path prefix, prepended onto install directories.
 CMAKE_INSTALL_PREFIX:PATH=/usr/local
@@ -245,7 +248,7 @@ IDF_TOOLCHAIN:STRING=gcc
 PROJECT_SOURCE_DIR:UNINITIALIZED=/Users/mgois/tcc/webserver_setup
 
 //No help, variable specified on the command line.
-PYTHON:UNINITIALIZED=/Users/mgois/.espressif/python_env/idf5.0_py3.10_env/bin/python
+PYTHON:UNINITIALIZED=/Users/mgois/.espressif/python_env/idf5.1_py3.10_env/bin/python
 
 //No help, variable specified on the command line.
 PYTHON_DEPS_CHECKED:UNINITIALIZED=1
@@ -300,9 +303,9 @@ CMAKE_CACHEFILE_DIR:INTERNAL=/Users/mgois/tcc/webserver_setup/build/bootloader
 //Major version of cmake used to create the current loaded cache
 CMAKE_CACHE_MAJOR_VERSION:INTERNAL=3
 //Minor version of cmake used to create the current loaded cache
-CMAKE_CACHE_MINOR_VERSION:INTERNAL=23
+CMAKE_CACHE_MINOR_VERSION:INTERNAL=24
 //Patch version of cmake used to create the current loaded cache
-CMAKE_CACHE_PATCH_VERSION:INTERNAL=2
+CMAKE_CACHE_PATCH_VERSION:INTERNAL=0
 //Path to CMake executable.
 CMAKE_COMMAND:INTERNAL=/opt/homebrew/Cellar/cmake/3.23.2/bin/cmake
 //Path to cpack program executable.
