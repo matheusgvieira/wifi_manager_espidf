@@ -1,17 +1,16 @@
 #include "wifi_ap.h"
 
-static const char *TAG = "ESP_WIFI_APSTA";
+led_rgb wifi_led = {.pin = 2, .time = 1000, .color = "blue"};
+
+static const char *TAG = "ESP_WIFI";
 
 static int s_retry_num = 0;
-
-static httpd_handle_t server = NULL;
-
-led_rgb wifi_apsta_led = {.pin = 2, .time = 1000, .color = "blue"};
+const int CONNECTED_BIT = BIT0;
 
 TaskHandle_t xHandle;
-
+static httpd_handle_t server = NULL;
 static EventGroupHandle_t wifi_event_group;
-const int CONNECTED_BIT = BIT0;
+
 
 static int save_wifi_credentials(wifi_credentials *credentials) {
     esp_err_t err = nvs_flash_init();
@@ -39,41 +38,114 @@ static int save_wifi_credentials(wifi_credentials *credentials) {
     return -1;
 }
 
+void get_wifi_credentials(wifi_credentials *credentials) {
+    // Initialize NVS
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK( err );
+
+    printf("\n");
+    printf("Opening Non-Volatile Storage (NVS) handle... \n");
+    nvs_handle_t nvs_handle;
+    err = nvs_open("storage", NVS_READWRITE, &nvs_handle);
+
+    if (err != ESP_OK) {
+        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } else {
+        printf("Reading ssid from NVS ... \n");
+
+        size_t required_size_ssid;
+        nvs_get_str(nvs_handle, "ssid", NULL, &required_size_ssid);
+        char *ssid = malloc(required_size_ssid);
+        err = nvs_get_str(nvs_handle, "ssid", ssid, &required_size_ssid);
+
+        switch (err) {
+            case ESP_OK:
+                printf("Get in nvs ssid = %s\n", ssid);
+                credentials -> ssid = ssid;
+                break;
+            case ESP_ERR_NVS_NOT_FOUND:
+                printf("The ssid is not initialized yet!\n");
+                break;
+            default :
+                printf("Error (%s) reading!\n", esp_err_to_name(err));
+        }
+
+        printf("Reading password from NVS ... \n");
+
+        size_t required_size_password;
+        nvs_get_str(nvs_handle, "password", NULL, &required_size_password);
+        char *password = malloc(required_size_password);
+        err = nvs_get_str(nvs_handle, "password", password, &required_size_password);
+
+        switch (err) {
+            case ESP_OK:
+                printf("Get in nvs password = %s\n", password);
+                credentials -> password = password;
+                break;
+            case ESP_ERR_NVS_NOT_FOUND:
+                printf("The password is not initialized yet!\n");
+                break;
+            default :
+                printf("Error (%s) reading!\n", esp_err_to_name(err));
+        }
+
+        nvs_close(nvs_handle);
+    }
+}
+
+int reset_wifi_credentials() {
+    esp_err_t err = nvs_flash_init();
+    nvs_handle_t nvs_handle;
+    err = nvs_open("storage", NVS_READWRITE, &nvs_handle);
+
+    if (err != ESP_OK) {
+        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } else {
+        printf("Erasing wifi credentials... \n");
+
+        err = nvs_erase_key(nvs_handle, "ssid");
+        printf((err != ESP_OK) ? "SSID no erase in nvs!\n" : "SSID erase in nvs!\n");
+
+        err = nvs_erase_key(nvs_handle, "password");
+        printf((err != ESP_OK) ? "PASSWORD no erase in nvs!\n" : "PASSWORD erase in nvs!\n");
+
+        nvs_commit(nvs_handle);
+
+        nvs_close(nvs_handle);
+        return 1;
+    }
+
+    return -1;
+}
+
 static esp_err_t stop_webserver(httpd_handle_t server)
 {
-    // Stop the httpd server
     return httpd_stop(server);
 }
 
-/* An HTTP GET handler */
 static esp_err_t get_handler(httpd_req_t *req)
 {
-    /* Send a simple response */
     const char resp[] = "ESP_AP_OK";
     httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
 
-/* An HTTP POST handler */
 static esp_err_t post_handler(httpd_req_t *req)
 {
     char content[100];
 
-    /* Truncate if content length larger than the buffer */
     size_t recv_size = MIN(req->content_len, sizeof(content));
 
     int ret = httpd_req_recv(req, content, recv_size);
 
-    if (ret <= 0) {  /* 0 return value indicates connection closed */
-        /* Check if timeout occurred */
+    if (ret <= 0) {
         if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
-            /* In case of timeout one can choose to retry calling
-             * httpd_req_recv(), but to keep it simple, here we
-             * respond with an HTTP 408 (Request Timeout) error */
             httpd_resp_send_408(req);
         }
-        /* In case of error, returning ESP_FAIL will
-         * ensure that the underlying socket is closed */
         return ESP_FAIL;
     }
 
@@ -89,11 +161,11 @@ static esp_err_t post_handler(httpd_req_t *req)
 
     if (save_wifi_credentials(&credentials) == -1) {
         ESP_LOGI(TAG, "Erro ao salvar as credentials do wifi.");
+        return ESP_FAIL;
     }
 
     cJSON_Delete(body);
 
-    /* Send a simple response */
     const char resp[] = "Setup wireless successfully!";
     httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
 
@@ -104,7 +176,6 @@ static esp_err_t post_handler(httpd_req_t *req)
 
     return ESP_OK;
 }
-
 
 static const httpd_uri_t uri_get = {
         .uri       = "/ap",
@@ -123,19 +194,14 @@ static const httpd_uri_t uri_post = {
 
 static httpd_handle_t start_webserver(void)
 {
-    /* Generate default configuration */
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
-    /* Empty handle to esp_http_server */
     httpd_handle_t server = NULL;
 
-    /* Start the httpd server */
     if (httpd_start(&server, &config) == ESP_OK) {
-        /* Register URI handlers */
         httpd_register_uri_handler(server, &uri_get);
         httpd_register_uri_handler(server, &uri_post);
     }
-    /* If server failed to start, handle will be NULL */
     return server;
 }
 
@@ -154,7 +220,7 @@ static void wifi_event_ap_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
-static void wifi_apsta()
+static void wifi_ap()
 {
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -202,120 +268,8 @@ static void wifi_apsta()
              CONFIG_AP_WIFI_SSID, CONFIG_AP_WIFI_PASSWORD, CONFIG_AP_WIFI_CHANNEL);
 }
 
-void get_wifi_credentials(wifi_credentials *credentials) {
-    // Initialize NVS
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        // NVS partition was truncated and needs to be erased
-        // Retry nvs_flash_init
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK( err );
-
-    // Open
-    printf("\n");
-    printf("Opening Non-Volatile Storage (NVS) handle... ");
-    nvs_handle_t my_handle;
-    err = nvs_open("storage", NVS_READWRITE, &my_handle);
-
-    if (err != ESP_OK) {
-        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
-    } else {
-        // read ssid in nvs
-        printf("Reading ssid from NVS ... ");
-        size_t required_size_ssid;
-        nvs_get_str(my_handle, "ssid", NULL, &required_size_ssid);
-        char *ssid = malloc(required_size_ssid);
-        err = nvs_get_str(my_handle, "ssid", ssid, &required_size_ssid);
-
-        switch (err) {
-            case ESP_OK:
-                printf("Done\n");
-                printf("Get in nvs ssid = %s\n", ssid);
-                credentials -> ssid = ssid;
-                break;
-            case ESP_ERR_NVS_NOT_FOUND:
-                printf("The ssid is not initialized yet!\n");
-                break;
-            default :
-                printf("Error (%s) reading!\n", esp_err_to_name(err));
-        }
-        // read password in nvs
-        printf("Reading password from NVS ... ");
-        size_t required_size_password;
-        nvs_get_str(my_handle, "password", NULL, &required_size_password);
-        char *password = malloc(required_size_password); // value will default to 0, if not set yet in NVS
-        err = nvs_get_str(my_handle, "password", password, &required_size_password);
-
-        switch (err) {
-            case ESP_OK:
-                printf("Get in nvs password = %s\n", password);
-                credentials -> password = password;
-                break;
-            case ESP_ERR_NVS_NOT_FOUND:
-                printf("The password is not initialized yet!\n");
-                break;
-            default :
-                printf("Error (%s) reading!\n", esp_err_to_name(err));
-        }
-
-        nvs_close(my_handle);
-    }
-}
-
-int reset_wifi_credentials() {
-    esp_err_t err = nvs_flash_init();
-    nvs_handle_t my_handle;
-    err = nvs_open("storage", NVS_READWRITE, &my_handle);
-
-    if (err != ESP_OK) {
-        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
-    } else {
-        printf("Erasing wifi credentials... \n");
-        err = nvs_erase_key(my_handle, "ssid");
-        printf((err != ESP_OK) ? "SSID no erase in nvs!\n" : "SSID erase in nvs!\n");
-        err = nvs_erase_key(my_handle, "password");
-        printf((err != ESP_OK) ? "PASSWORD no erase in nvs!\n" : "PASSWORD erase in nvs!\n");
-
-        nvs_commit(my_handle);
-
-        nvs_close(my_handle);
-        return 1;
-    }
-
-    return -1;
-}
-
-void setup_wifi() {
-
-    // Init led
-    init_led(&wifi_apsta_led);
-
-    //Initialize NVS
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
-
-    ESP_LOGI(TAG, "ESP_WIFI_MODE_APSTA");
-    wifi_apsta();
-
-    xTaskCreate(toggle_led_task, "toggle_led_task", 1024*4, &wifi_apsta_led, 2, &xHandle);
-
-    /* Start the server for the first time */
-    server = start_webserver();
-
-}
-
-bool check_credentials(wifi_credentials *credentials) {
-    return (strlen(credentials->ssid) <= 0 || strlen(credentials->password) <= 0) ? true : false;
-}
-
 static void wifi_event_sta_handler(void* arg, esp_event_base_t event_base,
-                          int32_t event_id, void* event_data)
+                                   int32_t event_id, void* event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
@@ -338,7 +292,7 @@ static void wifi_event_sta_handler(void* arg, esp_event_base_t event_base,
 
 int8_t wifi_connect_sta(wifi_credentials *credentials) {
     // Init led
-    init_led(&wifi_apsta_led);
+    init_led(&wifi_led);
 
     wifi_event_group = xEventGroupCreate();
 
@@ -384,12 +338,12 @@ int8_t wifi_connect_sta(wifi_credentials *credentials) {
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
                  credentials->ssid, credentials->password);
-        set_state_led(&wifi_apsta_led, 1);
+        set_state_led(&wifi_led, 1);
         return 1;
     } else if (bits & WIFI_FAIL_BIT) {
         ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
                  credentials->ssid, credentials->password);
-        set_state_led(&wifi_apsta_led, 0);
+        set_state_led(&wifi_led, 0);
         return 0;
     } else {
         ESP_LOGE(TAG, "UNEXPECTED EVENT");
@@ -397,5 +351,33 @@ int8_t wifi_connect_sta(wifi_credentials *credentials) {
 
     return 0;
 }
+
+bool check_credentials(wifi_credentials *credentials) {
+    return (strlen(credentials->ssid) <= 0 || strlen(credentials->password) <= 0) ? true : false;
+}
+
+void setup_wifi() {
+
+    init_led(&wifi_led);
+
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+
+    ESP_LOGI(TAG, "ESP_WIFI_MODE_APSTA");
+    wifi_ap();
+
+    xTaskCreate(toggle_led_task, "toggle_led_task", 1024*4, &wifi_led, 2, &xHandle);
+
+    server = start_webserver();
+
+}
+
+
+
+
 
 

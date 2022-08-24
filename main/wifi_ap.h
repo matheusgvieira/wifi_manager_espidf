@@ -23,8 +23,6 @@
 #include "led.h"
 
 // Defines
-//#define CONFIG_AP_WIFI_SSID      "ESP_TCC"
-//#define CONFIG_AP_WIFI_PASSWORD      "12345678"
 #define EXAMPLE_ESP_WIFI_CHANNEL   1
 #define EXAMPLE_MAX_STA_CONN       4
 #define EXAMPLE_ESP_MAXIMUM_RETRY  5
@@ -38,10 +36,11 @@ typedef struct {
 } wifi_credentials;
 
 // Functions
-void setup_wifi();
 void get_wifi_credentials(wifi_credentials *credentials);
-int reset_wifi_credentials();
 bool check_credentials(wifi_credentials *credentials);
+int reset_wifi_credentials();
+
 int8_t wifi_connect_sta(wifi_credentials *credentials);
+void setup_wifi();
 
 #endif //WEBSERVER_SETUP_WIFI_AP_H
